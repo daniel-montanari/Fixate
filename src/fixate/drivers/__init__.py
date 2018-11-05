@@ -1,5 +1,9 @@
-from inspect import isfunction
+from inspect import isroutine
 from functools import wraps, partial
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__file__)
 
 
 def _ensure_connected(f):
@@ -12,10 +16,10 @@ def _ensure_connected(f):
     return wrapper
 
 
-class DriverMeta(type):
+class ResourceMeta(type):
     def __new__(mcs, clsname, bases, dct):
         for name, attr in dct.items():
-            if isfunction(attr):
+            if isroutine(attr):
                 if name.startswith('_') or name in ('connect', 'disconnect') or name in dct.get('_connect_ignore', []):
                     # Don't wrap these functions with _ensure_connected
                     continue
@@ -23,9 +27,9 @@ class DriverMeta(type):
         return super().__new__(mcs, clsname, bases, dct)
 
 
-class Driver(metaclass=DriverMeta):
+class Resource(metaclass=ResourceMeta):
     """
-    Driver base class for creating self connecting drivers.
+    Resource base class for creating self connecting Resources.
     connect is called whenever a public method api call is made and is_connected = False
     ie.
     def _my_func(self):
@@ -46,7 +50,7 @@ class Driver(metaclass=DriverMeta):
         connection could not be established
         :return:
         """
-        print("Connected to {}".format(self.__class__.__name__))
+        log.debug("Connected to {}".format(self.__class__.__name__))
         self.is_connected = True
 
     def disconnect(self):
@@ -54,63 +58,37 @@ class Driver(metaclass=DriverMeta):
         Override disconnect function but ensure that self.is_connect is set to False
         :return:
         """
-        print("Disconnected from {}".format(self.__class__.__name__))
+        log.debug("Disconnected from {}".format(self.__class__.__name__))
         self.is_connected = False
 
 
-class DriverManager:
+class ResourceManager:
     """
-    Driver manager allows for multiple drivers to be collated and managed from a central location.
-    Drivers must be either derived from the driver class or must implement a the functions
+    Resource manager allows for multiple Resources to be collated and managed from a central location.
+    Resources must be either derived from the Resource class or must implement a the functions
     def connect(self): # No Parameters
     def disconnect(self): # No Parameters
     and have an attribute
     is_connected (Boolean)
     """
 
-    def __init__(self, **kwargs):
-        self.drivers = {}
+    def __init__(self):
+        self.resources = {}
         self._cleanup = []
-        self.add_drivers(**kwargs)
 
-    def add_drivers(self, **kwargs):
+    def add_resource(self, id, resource):
         """
-        :param kwargs: kwargs of <id>=<driver>.
+        :param kwargs: kwargs of <id>=<Resource>.
         Eg.
-        >>>class MyDmm(Driver):
+        >>>class MyDmm(Resource):
         >>>    def hello(self):
         >>>        print("World")
-        >>>dm = DriverManager(dmm=MyDmm())
+        >>>dm = ResourceManager(dmm=MyDmm())
         >>>dm.dmm.hello()
         World
         :return:
         """
-        self.drivers.update(kwargs)
-
-    def remove_drivers(self, *ids):
-        """
-        :param ids: Drivers to be removed
-        eg.
-        >>>class MyDmm(Driver):
-        >>>    def hello(self):
-        >>>        print("Hello World")
-        >>>dm = DriverManager(dmm=MyDmm(), dmm2=MyDmm())
-        >>>dm.dmm.hello()
-        Hello World
-        >>>dm.remove_drivers('dmm', 'dmm2')
-        >>>dm.dmm.hello()
-        AttributeError: 'DriverManager' object has no attribute 'dmm'
-        :return:
-        """
-        for id in ids:
-            drv = self.drivers.get(id)
-            if drv:
-                drv.disconnect()
-                del self.drivers[id]
-
-    def register_initialisation(self, id, init_funcs):
-        # TODO Needed? Should this just be done on instantiation of the driver class?
-        pass
+        self.resources[id] = resource
 
     def cleanup_register(self, func, *args, **kwargs):
         """
@@ -131,15 +109,44 @@ class DriverManager:
     def cleanup_clear(self):
         self._cleanup.clear()
 
+    def __setattr__(self, key, value):
+        """
+        Checks to see if you are trying to set a resource, if that is the case then pass that on to self.resources
+        for management
+        :param key:
+        :param value:
+        :return:
+        """
+        if isinstance(value, Resource):
+            self.add_resource(key, value)
+            return
+        super().__setattr__(key, value)
+
     def __getattr__(self, attr):
-        driver = self.drivers.get(attr)
-        if driver is None:
+        """
+        If no attribute exists then it tries to grab the equivalent attribute from self.resources
+        :param attr:
+        :return:
+        """
+        resource = self.resources.get(attr)
+        if resource is None:
             return self.__getattribute__(attr)  # Should Raise Attribute Error
-        return driver
+        return resource
+
+    def __delattr__(self, name):
+        """
+
+        :param item:
+        :return:
+        """
+        if name in self.resources:
+            del self.resources[name]
+            return
+        return super().__delattr__(name)  # Should Raise Attribute Error
 
 
 if __name__ == "__main__":
-    class MyDmm(Driver):
+    class MyDmm(Resource):
         def __init__(self):
             self.subcls = OtherClass()
 
@@ -153,14 +160,20 @@ if __name__ == "__main__":
         def _unconnected_hell(self):
             print("Goodbye Cruel World")
 
+        def other_method(self):
+            pass
+
 
     class OtherClass:
         def another_func(self):
             print("Other func")
 
 
-    dm = DriverManager(dmm=MyDmm())
-    print("Driver Manager Instantiated")
+    # dm = ResourceManager(dmm=MyDmm())
+    dm = ResourceManager()
+    dm.dmm = MyDmm()
+    # dm.add_resource("dmm", MyDmm())
+    print("Resource Manager Instantiated")
     dm.dmm.hello()
     dm.dmm.disconnect()
     dm.dmm._unconnected_hell()
@@ -172,5 +185,9 @@ if __name__ == "__main__":
     help(dm.dmm.hello)
     dm.dmm.disconnect()
     'World'
-    # dm.remove_drivers(['dmm'])
+    print(dm.dmm)
+    del dm.dmm
+    dm.dmm = MyDmm()
+    print(dm.dmm)
+    # dm.remove_Resources(['dmm'])
     # dm.dmm.hello()
