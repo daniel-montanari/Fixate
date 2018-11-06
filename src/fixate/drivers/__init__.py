@@ -16,6 +16,15 @@ def _ensure_connected(f):
     return wrapper
 
 
+def disable_auto_connect(f):
+    @wraps(f)
+    def wrapper(self, *args, **kwargs):
+        f._disable_auto_connect = True
+        return f(self, *args, **kwargs)
+
+    return wrapper
+
+
 class ResourceMeta(type):
     def __new__(mcs, clsname, bases, dct):
         for name, attr in dct.items():
