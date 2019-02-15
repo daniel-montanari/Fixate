@@ -33,10 +33,6 @@ class DMM(metaclass=ABCMeta):
     REGEX_ID = "DMM"
     is_connected = False
 
-    def __init__(self, instrument):
-        self.instrument = instrument
-        self.samples = 1
-
     @abstractmethod
     def measure(self, *mode, trigger=True, **mode_params):
         pass

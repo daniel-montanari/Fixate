@@ -1,8 +1,9 @@
 from threading import Lock
-from visa import constants
 from fixate.core.exceptions import InstrumentError, ParameterError
 from fixate.core.common import mode_builder
 from fixate.drivers.dmm.helper import DMM
+import visa
+from pyvisa.resources import SerialInstrument
 import time
 
 MODES = {
@@ -67,17 +68,12 @@ class Fluke8846A(DMM):
     REGEX_ID = "FLUKE,8846A"
     INSTR_TYPE = "VISA"
 
-    def __init__(self, instrument):
-        super().__init__(instrument)
-        instrument.rtscts = 1
+    def __init__(self, visa_id):
+        super().__init__()
+        self.visa_id = visa_id
         self.lock = Lock()
         self.display = "on"
         # del self.instrument.timeout
-        self.instrument.timeout = 10000
-        self.instrument.query_delay = 0
-        self.instrument.delay = 0
-        self.is_connected = True
-        self.reset()
         self._CLEAN_UP_FLAG = False
         self._ANALOG_FLAG = False
         self._DIGITAL_FLAG = False
@@ -137,6 +133,23 @@ class Fluke8846A(DMM):
             'capacitance': 'CAP:RES',
             None: "",
         }
+
+    def init(self):
+        rm = visa.ResourceManager()
+        self.instrument: SerialInstrument = rm.open_resource(self.visa_id)
+        self.instrument.rtscts = 1
+        self.instrument.timeout = 10000
+        self.instrument.query_delay = 0
+        self.instrument.delay = 0
+        self.samples = 1
+        self.connect()
+        self.reset()
+
+    def connect(self):
+        self.instrument.open()
+
+    def disconnect(self):
+        self.instrument.close()
 
     def measure(self, *mode, trigger=True, **mode_params):
         """
@@ -290,10 +303,9 @@ class Fluke8846A(DMM):
         # Disaster Recovery
         self.instrument.write("\x03;*RST;*CLS")  # CTRL-C
         time.sleep(1.1)  # time needed to clear the dmm read buffer
-        self.instrument.flush(constants.VI_READ_BUF_DISCARD)
-        self.instrument.close()
-        self.instrument.open()
-
+        self.instrument.flush(visa.constants.VI_READ_BUF_DISCARD)
+        self.instrument = None
+        self.init()
         # Setting up previous measurement
         self._write(self._build_mode_string())
 

@@ -26,6 +26,7 @@ DRIVERS = {}
 ASYNC_TASKS = []
 DEBUG = False
 importer = None
+local = {}
 # Begin default "plugins"
 # Use plg_ prefix with dictionary of values to indicate to fixate to install this at startup
 # Default settings for csv reporting. Can be configured via yaml either removing or overriding with plg_csv

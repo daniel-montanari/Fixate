@@ -316,23 +316,12 @@ def retrieve_test_data(test_suite, index):
 
 def run_main_program(test_script_path=None):
     args, unknown = parser.parse_known_args()
-    load_config(args.config)
     fixate.config.load_dict_config({"log_file": args.log_file})
     supervisor = FixateSupervisor(test_script_path, args)
     exit(supervisor.run_fixate())
 
 
-def load_config(config: list = None):
-    # Load python environment fixate config
-    env_config = os.path.join(sys.prefix, "fixate.yml")
-    if os.path.exists(env_config):
-        fixate.config.load_yaml_config(env_config)
-    # TODO Load script config
 
-    # Load a list of config files
-    if config is not None:
-        for conf in config:
-            fixate.config.load_yaml_config(conf)
 
 
 # Setup configuration

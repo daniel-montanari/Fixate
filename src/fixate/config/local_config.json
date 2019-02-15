@@ -1,3 +1,23 @@
 {
-    "INSTRUMENTS": {}
+    "INSTRUMENTS": {
+        "serial": {},
+        "visa": [
+            [
+                "Siglent Technologies,SPD3303X,SPD3XHBX2R0898,1.01.01.02.05,V3.0",
+                "USB0::0x0483::0x7540::SPD3XHBX2R0898::INSTR"
+            ],
+            [
+                "AGILENT TECHNOLOGIES,MSO-X 3014A,MY51360314,02.41.2015102200\n",
+                "USB0::0x0957::0x17A8::MY51360314::INSTR"
+            ],
+            [
+                "RIGOL TECHNOLOGIES,DG1022 ,DG1D141401378,,00.03.00.08.00.02.10\n",
+                "USB0::0x09C4::0x0400::DG1D141401378::INSTR"
+            ],
+            [
+                "FLUKE,8846A,3553022,08/02/10-11:53\r\n",
+                "ASRL52::INSTR"
+            ]
+        ]
+    }
 }

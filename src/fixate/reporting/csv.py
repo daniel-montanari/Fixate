@@ -114,10 +114,6 @@ class CSVWriter:
     def __init__(self, ):
         self.csv_queue = Queue()
         self.csv_writer = None
-        # data = fixate.config.get_config_dict()
-        # data.update(fixate.config.get_plugin_data('plg_csv'))
-        # self.csv_dir = os.path.join(*fixate.config.render_template(data["tpl_csv_path"], **data,
-        #                                                            **fixate.config.RESOURCES["SEQUENCER"].context_data))
         self.reporting = CsvReporting()
 
     def install(self):
@@ -289,13 +285,6 @@ class CsvReporting:
         """
         global writer
         writer.csv_queue.put(line)
-        # try:
-        #     os.makedirs(self.csv_dir)
-        # except OSError:
-        #     pass
-        # with open(self.csv_path, 'a+', newline='') as f:
-        #     writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
-        #     writer.writerow(line)
 
 
 writer = None

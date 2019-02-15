@@ -31,7 +31,7 @@ def load_dict_config(in_dict: dict, config_name: str = '') -> None:
         fixate.config.__dict__.update(in_dict)
 
 
-def load_json_config(in_file, config_name=None) -> None:
+def load_json_config(in_file: str, config_name: str = '') -> None:
     """
     :param in_file:
      valid open file like such as
@@ -64,10 +64,13 @@ def load_json_config(in_file, config_name=None) -> None:
         fixate.config.__dict__.update(json.load(in_file))
 
 
-def load_yaml_config(yaml_in: str) -> None:
+def load_yaml_config(yaml_in: str, config_name: str = '') -> None:
     """
     :param in_file:
      string representing a valid file path to the yaml file
+     :param config_name:
+     optional way of grouping the config details
+
      >>> import fixate.config
      >>> with open("my_yaml_file.yml") as f:
      >>>    load_yaml_config("my_yaml_file.yml")
@@ -79,7 +82,10 @@ def load_yaml_config(yaml_in: str) -> None:
     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
     yaml.default_flow_style = False
     yaml_path = pathlib.Path(yaml_in)
-    fixate.config.__dict__.update(yaml.load(yaml_path))
+    if config_name:
+        fixate.config.__dict__.update({config_name: yaml.load(yaml_path)})
+    else:
+        fixate.config.__dict__.update(yaml.load(yaml_path))
 
 
 def get_plugins() -> dict:
@@ -98,6 +104,7 @@ class _UnseenFormatter(Formatter):
     """
     Renders string formats with invalid keys rendered as the key name
     """
+
     def get_value(self, key, args, kwargs):
         if isinstance(key, str):
             try:
